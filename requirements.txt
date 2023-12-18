@@ -1,3 +1,5 @@
 youtube-transcript-api
 langchain
 openai 
+aiohttp
+pyautogen==0.2.0b5
