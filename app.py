@@ -15,19 +15,19 @@ import autogen
 
 load_dotenv()
 browserless_api_key = os.getenv("BROWSERLESS_API_KEY")
-serper_api_key = os.getenv("SERP_API_KEY")
-airtable_api_key = os.getenv("AIRTABLE_API_KEY")
+serper_api_key = os.getenv("SERPER_API_KEY")
+# airtable_api_key = os.getenv("AIRTABLE_API_KEY")
 config_list = config_list_from_json("OAI_CONFIG_LIST")
 
 
 # ------------------ Create functions ------------------ #
 
 # Function for google search
-def google_search(search_keyword):    
+def google_search(query):    
     url = "https://google.serper.dev/search"
 
     payload = json.dumps({
-        "q": search_keyword
+        "q": query
     })
 
     headers = {
@@ -162,40 +162,45 @@ researcher.register_function(
     }
 )
 
-# Create research manager agent
-research_manager = GPTAssistantAgent(
-    name="research_manager",
-    llm_config = {
-        "config_list": config_list,
-        "assistant_id": "asst_C1Ta5XmmEcYD6vnOSVflnwG9"
-    }
-)
+# # Create research manager agent
+# research_manager = GPTAssistantAgent(
+#     name="research_manager",
+#     llm_config = {
+#         "config_list": config_list,
+#         "assistant_id": "asst_C1Ta5XmmEcYD6vnOSVflnwG9"
+#     }
+# )
 
 
-# Create director agent
-director = GPTAssistantAgent(
-    name = "director",
-    llm_config = {
-        "config_list": config_list,
-        "assistant_id": "asst_zVBJGch5mOyCYl9H1J3L9Ime",
-    }
-)
+# # Create director agent
+# director = GPTAssistantAgent(
+#     name = "director",
+#     llm_config = {
+#         "config_list": config_list,
+#         "assistant_id": "asst_zVBJGch5mOyCYl9H1J3L9Ime",
+#     }
+# )
 
-director.register_function(
-    function_map={
-        "get_airtable_records": get_airtable_records,
-        "update_single_airtable_record": update_single_airtable_record
-    }
-)
+# director.register_function(
+#     function_map={
+#         "get_airtable_records": get_airtable_records,
+#         "update_single_airtable_record": update_single_airtable_record
+#     }
+# )
 
 
 # Create group chat
-groupchat = autogen.GroupChat(agents=[user_proxy, researcher, research_manager, director], messages=[], max_round=15)
-group_chat_manager = autogen.GroupChatManager(groupchat=groupchat, llm_config={"config_list": config_list})
+# groupchat = autogen.GroupChat(agents=[user_proxy, researcher, research_manager, director], messages=[], max_round=15)
+# group_chat_manager = autogen.GroupChatManager(groupchat=groupchat, llm_config={"config_list": config_list})
 
 
 # ------------------ start conversation ------------------ #
+# message = """
+# Research the funding stage/amount & pricing for each company in the list: https://airtable.com/appj0J4gFpvLrQWjI/tblF4OmG6oLjYtgZl/viwmFx2ttAVrJm0E3?blocks=hide
+# """
+# user_proxy.initiate_chat(group_chat_manager, message=message)
+
 message = """
-Research the funding stage/amount & pricing for each company in the list: https://airtable.com/appj0J4gFpvLrQWjI/tblF4OmG6oLjYtgZl/viwmFx2ttAVrJm0E3?blocks=hide
+What are the post dieta protocols for Noya Rao?
 """
-user_proxy.initiate_chat(group_chat_manager, message=message)
+user_proxy.initiate_chat(researcher, message=message)
