@@ -4,3 +4,5 @@ openai
 aiohttp
 pyautogen==0.2.0b5
 bs4
+google-search-results
+arxiv

@@ -53,34 +53,31 @@ async def scrape_website(objective: str, url: str):
         print(f"HTTP request failed with status code {response.status_code}")        
 
 
-async def search_youtube_video_ids(session, query, number_of_results=5):
+def search_youtube(query, number_of_results=5):
     video_ids = []
     try:
-        async with session.get('https://serpapi.com/search.json', params={
+        response = requests.get('https://serpapi.com/search.json', params={
             'engine': 'youtube',
             'search_query': query,
             'api_key': serp_api_key,
-        }) as response:
+        })
 
-            if response.status != 200:
-                raise aiohttp.ClientResponseError(
-                    response.status, message=f"HTTP error occurred: {response.status}")
+        if response.status_code != 200:
+            raise Exception(f"HTTP error occurred: {response.status_code}")
 
-            data = await response.json()
-            # Extract video IDs from the results
-            for result in data.get('movie_results', [])[:number_of_results]:
-                video_url = result.get('link')
-                video_id = video_url.split('watch?v=')[-1]
-                video_ids.append(video_id)
+        data = response.json()
+        # # Extract video IDs from the results
+        # for result in data.get('movie_results', [])[:number_of_results]:
+        #     video_url = result.get('link')
+        #     video_id = video_url.split('watch?v=')[-1]
+        #     video_ids.append(video_id)
 
-    except aiohttp.ClientResponseError as err:
-        print(err)
     except Exception as err:
         print(f"An error occurred: {err}")
 
-    return video_ids
+    return data
 
-async def get_youtube_transcript(video_id):
+def get_youtube_transcript(video_id):
     try:
         transcript = YouTubeTranscriptApi.get_transcript(video_id)
         full_transcript = ' '.join(segment['text'] for segment in transcript)

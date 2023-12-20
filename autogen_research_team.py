@@ -7,20 +7,104 @@ from bs4 import BeautifulSoup
 from langchain.chat_models import ChatOpenAI
 from dotenv import load_dotenv
 import json
+from serpapi import GoogleSearch
 from autogen import config_list_from_json
 from autogen.agentchat.contrib.gpt_assistant_agent import GPTAssistantAgent
 from autogen import UserProxyAgent
 import autogen
+import arxiv
+from youtube_transcript_api import YouTubeTranscriptApi
+from youtube_transcript_api.formatters import JSONFormatter
+
+from agent_tools import search_youtube, get_youtube_transcript
 
 
 load_dotenv()
 browserless_api_key = os.getenv("BROWSERLESS_API_KEY")
+serp_api_key = os.getenv("SERP_API_KEY")
 serper_api_key = os.getenv("SERPER_API_KEY")
 airtable_api_key = os.getenv("AIRTABLE_API_KEY")
 config_list = config_list_from_json("OAI_CONFIG_LIST")
 
 
+client = arxiv.Client()
+# https://pypi.org/project/arxiv/
+
 # ------------------ Create functions ------------------ #
+
+# def search_arxiv(query):
+#     search = arxiv.Search(
+#         query = query,
+#         max_results = 10,
+#         sort_by = arxiv.SortCriterion.SubmittedDate
+#         )
+#     results = client.results(search)
+#     for r in client.results(search):
+#         print(r.title)
+#     all_results = list(results)
+#     print([r.title for r in all_results])
+#     return all_results
+
+# def download_paper(paper_id):
+#     paper = next(arxiv.Client().results(arxiv.Search(id_list=[paper_id])))
+#     # Download the PDF to the PWD with a default filename.
+#     paper.download_pdf()
+#     # Download the PDF to the PWD with a custom filename.
+#     paper.download_pdf(filename=f"{paper_id}.pdf")
+#     # Download the PDF to a specified directory with a custom filename.
+#     paper.download_pdf(dirpath="./mydir", filename=f"{paper_id}.pdf")
+
+def search_youtube(query):
+    number_of_results = int(5)
+
+    try:
+        response = requests.get('https://serpapi.com/search.json', params={
+            'engine': 'youtube',
+            'search_query': query,
+            'api_key': serp_api_key,
+        })
+
+        if response.status_code != 200:
+            raise Exception(f"HTTP error occurred: {response.status_code}")
+
+        data = response.json()
+        video_results = data.get('video_results', [])[:number_of_results]
+        enhanced_video_results = []
+        for video in video_results:
+            video_id = video['link'].split('v=')[-1]
+            transcript = get_youtube_transcript(video_id)
+            video['transcript'] = transcript
+            enhanced_video_results.append(video)
+        data['video_results'] = enhanced_video_results
+        return enhanced_video_results
+    except Exception as err:
+        print(f"An error occurred: {err}")
+
+    return data
+
+def get_youtube_transcript(video_id):
+    print("Getting transcript for video:", video_id)
+    try:
+        transcript = YouTubeTranscriptApi.get_transcript(video_id)
+        full_transcript = ' '.join(segment['text'] for segment in transcript)
+        return full_transcript
+    except Exception as e:
+        print(f"An error occurred while fetching the transcript: {e}")
+        return None
+
+def search_google_scholar(query):
+    try:
+        params = {
+            "engine": "google_scholar",
+            "q": query,
+            "api_key": serp_api_key,
+        }
+        search = GoogleSearch(params)
+        results = search.get_dict()
+        organic_results = results.get("organic_results", [])
+        return organic_results
+    except Exception as err:
+        print(f"An error occurred: {err}")
 
 # Function for google search
 def google_search(query):    
@@ -142,9 +226,11 @@ def update_single_airtable_record(base_id, table_id, id, fields):
 # Create user proxy agent
 user_proxy = UserProxyAgent(name="user_proxy",
     is_termination_msg=lambda msg: "TERMINATE" in msg["content"],
+    system_message=" A human admin. Interact with the Director to discuss the plan. Plan execution needs to be approved by this admin.",
     human_input_mode="ALWAYS",
     max_consecutive_auto_reply=1
     )
+
 
 # Create researcher agent
 researcher = GPTAssistantAgent(
@@ -158,7 +244,9 @@ researcher = GPTAssistantAgent(
 researcher.register_function(
     function_map={
         "web_scraping": web_scraping,
-        "google_search": google_search
+        "google_search": google_search,
+        "search_google_scholar": search_google_scholar,
+        "search_youtube": search_youtube,
     }
 )
 
@@ -194,13 +282,31 @@ groupchat = autogen.GroupChat(agents=[user_proxy, researcher, research_manager, 
 group_chat_manager = autogen.GroupChatManager(groupchat=groupchat, llm_config={"config_list": config_list})
 
 
-# ------------------ start conversation ------------------ #
-message = """
-Research the dieta recommendations for each master plant in the list: https://airtable.com/appEnnWVISZu0Gvmf/tblYyeP1dd1fQsQr1/viwKOL79VlpMYFOgo?blocks=hide
-"""
-user_proxy.initiate_chat(group_chat_manager, message=message)
-
+# # ------------------ start conversation ------------------ #
 # message = """
-# What are the post dieta protocols for Noya Rao?
+# Research the dieta recommendations noya rao
 # """
-# user_proxy.initiate_chat(researcher, message=message)
+# user_proxy.initiate_chat(group_chat_manager, message=message)
+
+if __name__ == "__main__":
+
+    def main():
+        message = input("Enter your message: ")
+        response = user_proxy.initiate_chat(group_chat_manager, message=message)
+        print("Assistant response:", response)
+
+    main()
+
+
+
+# if __name__ == "__main__":
+
+#     def main():
+        
+#         query = input("Enter your query for youtube: ")
+#         print("Searching youtube for:", query)
+#         results = search_youtube(query)
+#         print("Results:", results)
+
+#     main()
+
