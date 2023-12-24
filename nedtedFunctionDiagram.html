@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Nested Function Diagram - GoJS</title>
+    <script src="https://unpkg.com/gojs/release/go.js"></script>
+    <style>
+      #myDiagramDiv {
+        width: 400px;
+        height: 400px;
+        border: 1px solid black;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="myDiagramDiv"></div>
+    <script>
+      var $ = go.GraphObject.make; // for conciseness in defining templates
+
+      var myDiagram = $(
+        go.Diagram,
+        'myDiagramDiv', // must name or refer to the DIV HTML element
+        {
+          'undoManager.isEnabled': true, // enable undo & redo
+        }
+      );
+
+      // define the Node template
+      myDiagram.nodeTemplate = $(
+        go.Node,
+        'Auto',
+        $(
+          go.Shape,
+          'Rectangle',
+          { strokeWidth: 0 },
+          new go.Binding('fill', 'color')
+        ),
+        $(go.TextBlock, { margin: 8 }, new go.Binding('text', 'key'))
+      );
+
+      // define the Link template
+      myDiagram.linkTemplate = $(
+        go.Link,
+        { routing: go.Link.Orthogonal, corner: 5 },
+        $(go.Shape, { strokeWidth: 3, stroke: '#555' })
+      ); // the link shape
+
+      var nodeDataArray = [
+        { key: 'Outer Function("Outer")', color: 'lightblue' },
+        { key: 'Inner Function("Outer -> Inner")', color: 'lightgreen' },
+        {
+          key: 'Nested Function("Outer -> Inner -> Nested")',
+          color: 'lightyellow',
+        },
+      ];
+      var linkDataArray = [
+        {
+          from: 'Outer Function("Outer")',
+          to: 'Inner Function("Outer -> Inner")',
+        },
+        {
+          from: 'Inner Function("Outer -> Inner")',
+          to: 'Nested Function("Outer -> Inner -> Nested")',
+        },
+      ];
+      myDiagram.model = new go.GraphLinksModel(nodeDataArray, linkDataArray);
+    </script>
+  </body>
+</html>

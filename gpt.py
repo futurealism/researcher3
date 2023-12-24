@@ -29,6 +29,12 @@ encoding_name = "cl100k_base"
 
 # Helper functions
 
+async def get_ada_embedding(text):
+    text = text.replace("\n", " ")
+    response = await client.embeddings.create(input=[text], model="text-embedding-ada-002")
+    embedding = response.data[0].embedding
+    return embedding
+
 
 def num_tokens_from_string(string: str) -> int:
     """Returns the number of tokens in a text string."""
